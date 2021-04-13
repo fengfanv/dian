@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>air war | 小游戏</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <div id="container">
+
+        <!--gameScore 游戏分数-->
+        <div id='gameScore'></div>
+        <!--canvas 游戏渲染区域-->
+        <canvas id="canvas"></canvas>
+        <!--button 开始，暂停，继续，重新开始按钮-->
+        <div id='button'></div>
+        <!--飞机控制键盘-->
+        <ul class="keyboard">
+            <li name="up">上</li>
+            <li name="down">下</li>
+            <li name="left">左</li>
+            <li name="right">右</li>
+            <li name="fire">开火</li>
+            <li name="switch">切换</li>
+        </ul>
+
+
+    </div>
+
+    <script src="./js/public.js"></script>
+    <script>
+
+        //入口方法
+        function main() {
+
+            //1、初始化页面环境
+            let container = document.getElementById("container");
+            let screenWidth = document.documentElement.clientWidth;//屏幕的宽
+            let screenHeight = document.documentElement.clientHeight;//屏幕的高
+
+            let containerWidth = 0;//容器宽
+            let containerHeight = 0;//容器高
+
+            //兼容显示器，让游戏已9比16的矩形显示
+            if (screenWidth > 768) {
+                containerWidth = 9 / 16 * screenHeight;// newWidth/newHeight=9/16
+                containerHeight = screenHeight;
+            } else {
+                containerWidth = screenWidth;
+                containerHeight = screenHeight;
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+
+            //2、初始化canvas环境
+            let canvas = document.getElementById("canvas");
+            canvas.width = containerWidth;
+            canvas.height = containerHeight;
+            let ctx = canvas.getContext('2d');//生成一个canvas的实例
+
+
+            //3、初始化游戏环境
+            //声明一个飞机a
+            var fighter_a = new Fighter(ctx, containerWidth, containerHeight)
+
+
+            //给游戏键盘绑定事件
+            //
+            let operationMode = 'keyboard';//操作方式，第一种通过游戏里键盘操作keyboard，第二种通过触摸touch飞机变化其位置
+
+            let keyboard = document.getElementsByClassName('keyboard')[0];
+            let keyboardTimer = null;
+            if (checkBrowser() == 'pc') {
+                keyboard.onmousedown = keyboard_touchstart;
+                keyboard.onmouseup = keyboard_touchend;
+            } else {
+                //手机环境
+                keyboard.ontouchstart = keyboard_touchstart;
+                keyboard.ontouchend = keyboard_touchend;
+            }
+
+            //按下手指或鼠标
+            function keyboard_touchstart(e) {
+                let target = e.target || e.srcElement;
+                if (target.nodeName.toLowerCase() == 'li') {
+                    // console.log(target.getAttribute('name'));
+                    target.setAttribute('class', 'keyboard_selected')
+                    let keyname = target.getAttribute('name');
+                    if (keyname != 'switch') {
+
+
+                        keyboardTimer = setInterval(() => {
+
+                            if (keyname == 'up') {
+                                fighter_a.actionUp();
+                            } else if (keyname == 'down') {
+                                fighter_a.actionDown();
+                            } else if (keyname == 'left') {
+                                fighter_a.actionLeft();
+                            } else if (keyname == 'right') {
+                                fighter_a.actionRight();
+                            } else if (keyname == 'fire') {
+                                //开火
+                                fighter_a.actionFire();
+                            }
+                            console.log('事件循环触发');
+
+                        }, 100);
+                    } else {
+                        target.setAttribute('class', '');
+                        if (operationMode == 'keyboard') {
+                            operationMode = 'touch';
+                            keyboard.setAttribute('class', 'keyboard keyboard_touch');
+                        } else {
+                            operationMode = 'keyboard';
+                            keyboard.setAttribute('class', 'keyboard');
+                        }
+
+                    }
+                }
+
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            //松开手指或鼠标
+            function keyboard_touchend(e) {
+                let target = e.target || e.srcElement;
+                if (target.nodeName.toLowerCase() == 'li') {
+                    console.log(target.getAttribute('name'));
+                    target.setAttribute('class', '');
+                    if (typeof keyboardTimer == 'number') {
+                        window.clearInterval(keyboardTimer)
+                    }
+                }
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
+
+            //给canvas绑定触摸事件
+            if (checkBrowser() == 'pc') {
+                canvas.onmousedown = canvas_touchstart;
+                canvas.onmousemove = canvas_touchmove;
+                canvas.onmouseup = canvas_touchend;
+            } else {
+                //手机环境
+                canvas.ontouchstart = canvas_touchstart;
+                canvas.ontouchmove = canvas_touchmove;
+                canvas.ontouchend = canvas_touchend;
+            }
+
+
+            let hasTouchedIt = false;//这里需要已经摸到飞机，才能控制飞机位置
+            let extraX = 0;//额外的x值，这个是点击在飞机内部时,当前,点击,点,距离飞机边缘的距离
+            let extraY = 0;
+            let fighterBulletTimer = null;
+            function canvas_touchstart(e) {
+                if (operationMode == 'touch') {
+                    let layerX = 0;
+                    let layerY = 0;
+                    if (e.type == 'touchstart') {
+                        layerX = e.changedTouches[0].pageX;
+                        layerY = e.changedTouches[0].pageY;
+                    } else {
+                        layerX = e.layerX;
+                        layerY = e.layerY;
+                    }
+
+                    //检测是否点击在了飞机上
+                    if (layerX >= fighter_a.x && layerY >= fighter_a.y && layerX <= fighter_a.x + fighter_a.width && layerY <= fighter_a.y + fighter_a.height) {
+                        // console.log('点击在飞机上');
+                        hasTouchedIt = true;
+                        extraX = layerX - fighter_a.x;
+                        extraY = layerY - fighter_a.y;
+
+                        fighterBulletTimer = setInterval(() => {
+                            //开火
+                            fighter_a.actionFire();
+                        }, 100);
+
+                    } else {
+                        // console.log('没有点击在飞机上');
+                        hasTouchedIt = false;
+                    }
+                }
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            function canvas_touchmove(e) {
+                if (operationMode == 'touch' && hasTouchedIt == true) {
+                    let layerX = 0;
+                    let layerY = 0;
+                    if (e.type == 'touchmove') {
+                        layerX = e.changedTouches[0].pageX;
+                        layerY = e.changedTouches[0].pageY;
+                    } else {
+                        layerX = e.layerX;
+                        layerY = e.layerY;
+                    }
+                    fighter_a.setPosition(layerX - extraX, layerY - extraY);//设置飞机位置
+                }
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            function canvas_touchend(e) {
+                hasTouchedIt = false;
+                extraX = 0;
+                extraY = 0;
+                window.clearInterval(fighterBulletTimer);
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
+
+            //4、运行环境
+            let renderTimer = 100;//渲染时间间隔，0.1s
+            setInterval(() => {
+                //清空画布
+                ctx.clearRect(0, 0, containerWidth, containerHeight);
+
+                fighter_a.render();
+
+                // console.log(fighter_a.bullets);
+                //遍历战斗机子弹
+                if (fighter_a.bullets.length > 0) {
+                    //检查子弹是否需要移除
+                    for (let index in fighter_a.bullets) {
+                        if (fighter_a.bullets[index].getBulletPositionTop()) {
+                            fighter_a.bullets.splice(index, 1);
+                        }
+                    }
+                    //渲染子弹到屏幕上
+                    for (let item of fighter_a.bullets) {
+                        item.render();
+                        item.actionUp();
+                    }
+                }
+
+
+            }, renderTimer);
+
+
+
+
+
+        }
+        main();
+
+
+        //战斗机构造方法
+        function Fighter(ctx, containerWidth, containerHeight) {
+
+            //获取游戏环境大小
+            this.containerWidth = containerWidth;
+            this.containerHeight = containerHeight;
+
+            //porperty 飞机的属性
+            //飞机大小
+            this.width = 50;
+            this.height = 50;
+
+            this.image = '';//飞机默认贴图
+
+            this.backgroundColor = "#23A9F2";//飞机背景色
+
+            this.display = true;//是否显示
+
+            //飞机的位置，默认飞机出生在游戏环境的中间位置
+            this.x = (this.containerWidth / 2) - (this.width / 2);
+            this.y = (this.containerHeight / 2) - (this.height / 2);
+
+            this.speed = 5;//飞机移动速度
+
+            //action 飞机的动作
+            //向上的动作
+            this.actionUp = function () {
+                this.y = this.y - this.speed;
+            }
+            //向下的动作
+            this.actionDown = function () {
+                this.y = this.y + this.speed;
+            }
+            //向左的动作
+            this.actionLeft = function () {
+                this.x = this.x - this.speed;
+            }
+            //向右的动作
+            this.actionRight = function () {
+                this.x = this.x + this.speed;
+            }
+            //直接设置位置，这个用于兼容，不用游戏键盘，用手指直接点击飞机，然后移动飞机换位置
+            this.setPosition = function (x, y) {
+                this.x = x;
+                this.y = y;
+            }
+
+            this.bullets = [];//子弹实例列表
+
+            this.canFire = true;//是否可以开炮
+
+            this.canFireTimeInterval = 200;//0.2s才能开一炮
+
+            //开炮的动作
+            this.actionFire = function () {
+                if (this.canFire) {
+                    let bullet_next = new Bullet(ctx, this.containerWidth, this.containerHeight, this.x, this.y, this.width, this.height);
+                    this.bullets.push(bullet_next);
+                    this.canFire = false;
+                    setTimeout(() => {
+                        this.canFire = true;
+                    }, this.canFireTimeInterval)
+                }
+            }
+
+
+
+            //渲染飞机到页面上
+            this.render = function () {
+
+                //没有飞机图片，暂时先用一个圆代替
+                ctx.beginPath();//开始一个新路径
+                ctx.fillStyle = this.backgroundColor;
+                ctx.rect(this.x, this.y, this.width, this.height);
+                ctx.fill();//闭合路径
+
+            }
+
+
+        }
+
+
+        //己方战斗机子弹构造函数
+        function Bullet(ctx, containerWidth, containerHeight, fighterX, fighterY, fighterWidth, fighterHeight) {
+
+            //获取游戏环境大小
+            this.containerWidth = containerWidth;
+            this.containerHeight = containerHeight;
+
+            //获取飞机位置及大小
+            this.fighterX = fighterX;
+            this.fighterY = fighterY;
+            this.fighterWidth = fighterWidth;
+            this.fighterHeight = fighterHeight;
+
+            //porperty 子弹的属性
+            //子弹大小
+            this.width = 8;
+            this.height = 12;
+
+            //子弹默认在飞机的正前方出现
+            this.x = this.fighterX + (this.fighterWidth / 2) - (this.width / 2);
+            this.y = this.fighterY;
+
+            //子弹的背景色
+            this.backgroundColor = '#116da0';
+
+            //子弹贴图
+            this.image = '';
+
+            //子弹的速度
+            this.speed = 16;
+
+            //子弹是否显示
+            this.display = true;//是否显示
+
+
+            //action 子弹的动作
+            this.actionUp = function () {
+                this.y = this.y - this.speed;
+            }
+
+
+            //渲染子弹到画布上
+            this.render = function () {
+
+                //没有子弹图片，暂时先用一个矩形代替
+                ctx.beginPath();//开始一个新路径
+                ctx.fillStyle = this.backgroundColor;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fill();
+
+            }
+
+            //获取子弹是否已离开（移出）游戏界面，这个子弹已离开游戏界面，则子弹的生命周期就结束了，可以通过这个方法来监听，是不是要移除这个子弹
+            this.getBulletPositionTopNumber = 0;
+            //这个方法在一个柱子的生命周期里，一生，只生效一次，剩下都返回false
+            this.getBulletPositionTop = function () {
+                if (this.y + this.height <= 0 && this.getBulletPositionTopNumber == 0) {
+                    this.getBulletPositionTopNumber++;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+        }
+
+
+
+
+    </script>
+
+</body>
+
+</html>
