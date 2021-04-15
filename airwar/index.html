@@ -25,7 +25,7 @@
             <li name="left">左</li>
             <li name="right">右</li>
             <li name="fire">开火</li>
-            <li name="switch">切换</li>
+            <li name="switch">切换模式</li>
         </ul>
 
 
@@ -67,7 +67,12 @@
 
             //3、初始化游戏环境
             //声明一个飞机a
-            var fighter_a = new Fighter(ctx, containerWidth, containerHeight)
+            let fighter_a = new Fighter(ctx, containerWidth, containerHeight);
+
+            //初始化敌机数组
+            let canMakeEnemy = true;//是否可以创建敌机
+            let enemies = [];
+
 
 
             //给游戏键盘绑定事件
@@ -224,10 +229,14 @@
                 //清空画布
                 ctx.clearRect(0, 0, containerWidth, containerHeight);
 
-                fighter_a.render();
 
-                // console.log(fighter_a.bullets);
+
+                fighter_a.render();//渲染战斗机
+
+
+
                 //遍历战斗机子弹
+                // console.log(fighter_a.bullets);
                 if (fighter_a.bullets.length > 0) {
                     //检查子弹是否需要移除
                     for (let index in fighter_a.bullets) {
@@ -235,12 +244,44 @@
                             fighter_a.bullets.splice(index, 1);
                         }
                     }
+
                     //渲染子弹到屏幕上
                     for (let item of fighter_a.bullets) {
                         item.render();
                         item.actionUp();
+                        item.getCollide(enemies);//子弹与敌机碰撞检测
                     }
                 }
+
+
+                //创建敌机，2秒创建一个
+                if (canMakeEnemy) {
+                    let enemy_next = new Enemy(ctx, containerWidth, containerHeight);
+                    enemies.push(enemy_next);
+                    canMakeEnemy = false;
+                    setTimeout(() => {
+                        canMakeEnemy = true
+                    }, 2000)
+                }
+
+
+                //遍历敌机
+                if (enemies.length > 0) {
+                    console.log(enemies.length)
+                    //检查敌机是否需要移除
+                    for (let index in enemies) {
+                        if (enemies[index].getEnemyPositionBottom()) {
+                            enemies.splice(index, 1);
+                        }
+                    }
+                    //渲染敌机到屏幕上
+                    for (let item of enemies) {
+                        item.render();
+                        item.actionDown();
+                        // item.actionLeftRight();
+                    }
+                }
+
 
 
             }, renderTimer);
@@ -378,12 +419,13 @@
 
             //渲染子弹到画布上
             this.render = function () {
-
-                //没有子弹图片，暂时先用一个矩形代替
-                ctx.beginPath();//开始一个新路径
-                ctx.fillStyle = this.backgroundColor;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.fill();
+                if (this.display) {
+                    //没有子弹图片，暂时先用一个矩形代替
+                    ctx.beginPath();//开始一个新路径
+                    ctx.fillStyle = this.backgroundColor;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fill();
+                }
 
             }
 
@@ -399,9 +441,173 @@
                 }
             }
 
+            //检测子弹是否碰撞到敌机
+            this.getCollide = function (enemies) {
+                if (this.display) {
+
+
+                    if (typeof enemies != 'undefined') {
+                        for (item of enemies) {
+                            if (item.display) {
+                                if (this.x >= item.x && this.x <= item.x + item.width) {
+                                    if (this.y <= item.y + item.height && this.y >= item.y) {
+                                        item.displach();
+                                        this.display = false;
+                                        return true;
+                                    }
+                                }
+
+                                if (this.x <= item.x && this.x + this.width > item.x) {
+                                    if (this.y <= item.y + item.height && this.y >= item.y) {
+                                        item.displach();
+                                        this.display = false;
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        console.error('Bullet error:getCollide缺少参数~')
+                    }
+                }
+                return false;
+            }
+
         }
 
 
+        //敌机构造函数
+        function Enemy(ctx, containerWidth, containerHeight) {
+
+            //获取游戏环境大小
+            this.containerWidth = containerWidth;
+            this.containerHeight = containerHeight;
+
+            //porperty 敌机的属性
+            //敌机大小
+            this.width = 70;
+            this.height = 70;
+
+            this.image = '';//敌机默认贴图
+
+            this.backgroundColor = "#DA4E42";//敌机背景色
+
+            this.lifeValue = 10;//生命值
+
+            this.display = true;//是否显示
+
+            //敌机位置，默认出生在上方
+            this.x = Math.floor(Math.random() * (this.containerWidth - this.width));//x轴位置
+            this.y = 0 - this.height;//y轴位置
+
+            this.speed = 10;//移动速度
+
+            //action 敌机的动作
+            //敌机向下运动
+            this.actionDown = function () {
+                this.y = this.y + this.speed
+            }
+            //敌机随机左右运动
+            this.actionLeftRight = function () {
+                let random = Math.floor(Math.random() * 10) + 1;
+                if (random <= 5) {
+                    //向左运动
+                    if (this.x - this.speed >= 0) {
+                        this.x = this.x - this.speed;
+                    }
+                } else {
+                    //向右运动
+                    if (this.x + this.width + this.speed <= this.containerWidth) {
+                        this.x = this.x + this.speed;
+                    }
+                }
+            }
+
+            //接收攻击，处理攻击
+            this.displach = function () {
+                //每接收一次攻击，减少5生命值
+                if (this.lifeValue - 5 > 0) {
+                    this.lifeValue = this.lifeValue - 5;
+                } else {
+                    this.display = false;
+                }
+            }
+
+            //渲染敌机到canvas上
+            this.render = function () {
+                if (this.display) {
+                    //没有敌机图片，暂时先用一个矩形代替
+                    ctx.beginPath();//开始一个新路径
+                    ctx.fillStyle = this.backgroundColor;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fill();
+                }
+            }
+
+
+            //获取敌机是否已离开（移出）游戏界面，这个敌机已离开游戏界面，则敌机的生命周期就结束了，可以通过这个方法来监听，是不是要移除这个敌机
+            this.getEnemyPositionBottomNumber = 0;
+            //这个方法在一个敌机的生命周期里，一生，只生效一次，剩下都返回false
+            this.getEnemyPositionBottom = function () {
+                if (this.y >= this.containerHeight && this.getEnemyPositionBottomNumber == 0) {
+                    this.getEnemyPositionBottomNumber++;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+        }
+
+
+
+
+
+
+        function make_list(num) {
+            let arr = [];
+            for (let i = 0; i < num; i++) {
+                arr.push(Math.floor(Math.random() * num) + 1)
+            }
+            return arr;
+        }
+
+        //插入排序
+        function push_sort(arr_) {
+            let arr = arr_
+            for (let i = 1; i < arr.length; i++) {
+                let index = i;
+                let temp = arr[i];
+                for (let j = i - 1; j >= 0; j--) {
+                    if (arr[j] > temp) {
+                        arr[j + 1] = arr[j];
+                        index = j;
+                    }
+                }
+                if (index != i) {
+                    arr[index] = temp;
+                }
+            }
+            return arr;
+
+        }
+
+        function quick_sort(arr) {
+            if (arr.length <= 1) {
+                return arr;
+            }
+            let left_arr = [];
+            let right_arr = [];
+            let middle_value = arr.splice(Math.floor(arr.length / 2), 1)[0];
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i] >= middle_value) {
+                    right_arr.push(arr[i])
+                } else {
+                    left_arr.push(arr[i])
+                }
+            }
+            return quick_sort(left_arr).concat(middle_value, quick_sort(right_arr))
+        }
 
 
     </script>

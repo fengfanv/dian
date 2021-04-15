@@ -181,3 +181,6 @@ body {
     bottom: 0;
     margin:auto;
 }
+.keyboard li[name='switch']{
+    font-size: 12px;
+}
