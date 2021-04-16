@@ -445,22 +445,21 @@
             this.getCollide = function (enemies) {
                 if (this.display) {
 
-
                     if (typeof enemies != 'undefined') {
                         for (item of enemies) {
-                            if (item.display) {
+                            if (item.lifeValue>0) {
                                 if (this.x >= item.x && this.x <= item.x + item.width) {
                                     if (this.y <= item.y + item.height && this.y >= item.y) {
-                                        item.displach();
-                                        this.display = false;
+                                        item.displach();//调用敌机接收攻击方法
+                                        this.display = false;//子弹，隐藏自己
                                         return true;
                                     }
                                 }
 
                                 if (this.x <= item.x && this.x + this.width > item.x) {
                                     if (this.y <= item.y + item.height && this.y >= item.y) {
-                                        item.displach();
-                                        this.display = false;
+                                        item.displach();//调用敌机接收攻击方法
+                                        this.display = false;//子弹，隐藏自己
                                         return true;
                                     }
                                 }
@@ -505,40 +504,56 @@
             //action 敌机的动作
             //敌机向下运动
             this.actionDown = function () {
-                this.y = this.y + this.speed
-            }
-            //敌机随机左右运动
-            this.actionLeftRight = function () {
-                let random = Math.floor(Math.random() * 10) + 1;
-                if (random <= 5) {
-                    //向左运动
-                    if (this.x - this.speed >= 0) {
-                        this.x = this.x - this.speed;
-                    }
-                } else {
-                    //向右运动
-                    if (this.x + this.width + this.speed <= this.containerWidth) {
-                        this.x = this.x + this.speed;
-                    }
+                if(this.lifeValue>0){
+                    this.y = this.y + this.speed
                 }
             }
+            // //敌机随机左右运动
+            // this.actionLeftRight = function () {
+            //     let random = Math.floor(Math.random() * 10) + 1;
+            //     if (random <= 5) {
+            //         //向左运动
+            //         if (this.x - this.speed >= 0) {
+            //             this.x = this.x - this.speed;
+            //         }
+            //     } else {
+            //         //向右运动
+            //         if (this.x + this.width + this.speed <= this.containerWidth) {
+            //             this.x = this.x + this.speed;
+            //         }
+            //     }
+            // }
 
             //接收攻击，处理攻击
             this.displach = function () {
                 //每接收一次攻击，减少5生命值
-                if (this.lifeValue - 5 > 0) {
-                    this.lifeValue = this.lifeValue - 5;
-                } else {
-                    this.display = false;
+                this.lifeValue = this.lifeValue - 5;
+                if (this.lifeValue <= 0) {
+
+                    this.playExplosion = true;//开始播放死亡动画
                 }
             }
+
+            //敌机爆炸动画
+            this.playExplosion = false;
+            this.explosionKeyFrameIndex = 0;//播放到第几帧
+            this.explosionKeyFrames = ['#b79797', '#FF6EB4', '#FFB5C5', '#8B636C'];//爆照帧动画
 
             //渲染敌机到canvas上
             this.render = function () {
                 if (this.display) {
                     //没有敌机图片，暂时先用一个矩形代替
                     ctx.beginPath();//开始一个新路径
-                    ctx.fillStyle = this.backgroundColor;
+                    if (this.playExplosion) {
+                        if (this.explosionKeyFrameIndex + 1 >= this.explosionKeyFrames.length) {
+                            this.display = false;
+                        } else {
+                            ctx.fillStyle = this.explosionKeyFrames[this.explosionKeyFrameIndex];
+                            this.explosionKeyFrameIndex++;
+                        }
+                    } else {
+                        ctx.fillStyle = this.backgroundColor;
+                    }
                     ctx.fillRect(this.x, this.y, this.width, this.height);
                     ctx.fill();
                 }
@@ -557,56 +572,6 @@
                 }
             }
 
-        }
-
-
-
-
-
-
-        function make_list(num) {
-            let arr = [];
-            for (let i = 0; i < num; i++) {
-                arr.push(Math.floor(Math.random() * num) + 1)
-            }
-            return arr;
-        }
-
-        //插入排序
-        function push_sort(arr_) {
-            let arr = arr_
-            for (let i = 1; i < arr.length; i++) {
-                let index = i;
-                let temp = arr[i];
-                for (let j = i - 1; j >= 0; j--) {
-                    if (arr[j] > temp) {
-                        arr[j + 1] = arr[j];
-                        index = j;
-                    }
-                }
-                if (index != i) {
-                    arr[index] = temp;
-                }
-            }
-            return arr;
-
-        }
-
-        function quick_sort(arr) {
-            if (arr.length <= 1) {
-                return arr;
-            }
-            let left_arr = [];
-            let right_arr = [];
-            let middle_value = arr.splice(Math.floor(arr.length / 2), 1)[0];
-            for (let i = 0; i < arr.length; i++) {
-                if (arr[i] >= middle_value) {
-                    right_arr.push(arr[i])
-                } else {
-                    left_arr.push(arr[i])
-                }
-            }
-            return quick_sort(left_arr).concat(middle_value, quick_sort(right_arr))
         }
 
 

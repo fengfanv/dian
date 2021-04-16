@@ -5,7 +5,7 @@
 
 [开始游戏](https://fengfanv.github.io/dian/flappybird/index.html)
 
-2、模仿飞机大战的小游戏（完成状态：40%，难度：1.5分）
+2、模仿飞机大战的小游戏（完成状态：70%，难度：1.5分）
 
 [开始游戏](https://fengfanv.github.io/dian/airwar/index.html)
 
