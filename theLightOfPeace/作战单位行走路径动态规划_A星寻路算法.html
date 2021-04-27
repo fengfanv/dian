@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作战单位行走路线动态规划</title>
+    <style>
+        #app {
+            width: calc(20 * 30px + (20 * 1px));
+            /*一共有20列，就有19个右边（最后一个列没有右边），每个右边宽1px*/
+            height: calc(20 * 30px + (20 * 1px));
+            /*每列有20个子元素，就有19个下边（最后一个没有下边），每个下边宽1px*/
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .column {
+            height: calc(20 * 30px + (20 * 1px));
+            /*每列有20个子元素，就有19个下边（最后一个没有下边），每个下边宽1px*/
+            width: 31px;
+            display: inline-block;
+            overflow: auto;
+        }
+
+        .child {
+            width: 30px;
+            height: 30px;
+            font-size: 10px;
+            text-align: center;
+            line-height: 30px;
+        }
+
+        #theRightRouteList button {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>作战单位行走路线动态规划</h1>
+    <p>作战单位从 'A点' 到 'B点' 的路径</p>
+    <p>使用算法：A*寻路算法</p>
+
+    <hr>
+    <div id="app">
+
+    </div>
+    <!--路径结果列表-->
+    <ul id="theRightRouteList">
+
+    </ul>
+    <script>
+        var xLen = 20;//x轴方格数量
+        var yLen = 20;//y轴方格数量
+
+        //生成数组
+        var xArr = [];
+        for (let i = 0; i < xLen; i++) {
+            let yArr = [];
+            for (let j = 0; j < yLen; j++) {
+                yArr.push(i + ',' + j);
+            }
+            xArr.push(yArr);
+        }
+        console.log(xArr);
+
+        //渲染方格到页面
+        var app = document.getElementById('app');
+        for (let i = 0; i < xArr.length; i++) {
+            var column = document.createElement('div');
+            column.className = "column"
+            for (let j = 0; j < xArr[i].length; j++) {
+                var child = document.createElement('div');
+                child.className = "child child-" + i + "-" + j;
+                if (i + 1 != xArr.length) {
+                    child.style.borderRight = "1px solid black";
+                }
+                if (j + 1 != xArr[i].length) {
+                    child.style.borderBottom = "1px solid black";
+                }
+                column.appendChild(child);
+            }
+            app.appendChild(column);
+        }
+
+
+        /**
+         * A*寻路算法
+         * 算法思想，参考网址：https://mp.weixin.qq.com/s?__biz=MzIxMjE5MTE1Nw==&mid=2653191389&idx=1&sn=c1728de0464bfc00931fe2c36812a80a&chksm=8c990e07bbee87115480d733a869044183422deb39397dc3a06bf637d7f66639f2c2bbeec71d&mpshare=1&scene=23&srcid=0907yivB2WUR1GULxqOozYsm&sharer_sharetime=1599481803923&sharer_shareid=bcd951b302640a211da09211b777f459#rd
+         * start 数组 开始点
+         * end 数组 结束点
+         * obstacleArr 数组 障碍物坐标值
+         * xLen 数值 地图x轴长度
+         * yLen 数组 地图Y轴长度
+         * return 数组 返回起始点到结束点的路线
+         */
+        function a_search(start, end, obstacleArr, xLen, yLen) {
+            let openList = [];//开启列表，存储可以到达的节点
+            let closeList = [];//关闭列表，存储已到达的节点 
+            let current = null;//当前点
+            /**
+             * 每个节点（坐标）的权重公式
+             * F = G + H;
+             * G，从起点到当前点的成本，也就是走了多少步
+             * H，从当前点到结束点的成本，在不考虑障碍物的情况下，距离结束点的距离
+             */
+
+            //1、初始化，把起点放到openlist里
+            let temp = {
+                "node": start,
+                "G": 0,
+                "H": (Math.abs(start[0] - end[0]) + Math.abs(start[1] - end[1])),//曼哈顿距离，两个点坐标的x坐标相减取绝对值，y坐标相减取绝对值，两个结果在相加。
+                "F": null,
+                "parentNode": null//父节点
+            };
+            temp.F = temp.G + temp.H;
+            openList.push(temp);
+            current = openList[0];
+
+            //开始寻路
+            //寻路结束条件，当前点为为终点或开启列表为空
+            while (current.node.toString() != end.toString() && openList.length > 0) {
+                //2、在开启列表里寻找寻找权重（F）最小的坐标，并把这个权重最小的坐标从openlist中移除，放到closelist中，并设置该节点为当前点
+                //let minimumNode = findTheMinimumNode(openList);
+                //这里有点问题
+                let minimumNode = findTheMinimumNode(openList);
+                openList.splice(minimumNode.index, 1);
+                closeList.push(minimumNode.node);
+
+                // console.log(openList);
+                // console.log(closeList);
+                current = minimumNode.node;//设置权重最小的点为当前点
+                //3、找出当前点上下左右所有能够到达的点（触碰到障碍物，地图边界为不可到达的点）,看他们是否在openlist中，没有加入openlist
+                let top = null;
+                if (canTheNodeBeUsed([current.node[0], current.node[1] - 1], obstacleArr, xLen, yLen)) {
+                    top = {
+                        "node": [current.node[0], current.node[1] - 1],
+                        "G": current.G + 1,
+                        "H": null,
+                        "F": null,
+                        "parentNode": current//父节点
+                    };
+                    top.H = (Math.abs(top.node[0] - end[0]) + Math.abs(top.node[1] - end[1]));//曼哈顿距离，两个点坐标的x坐标相减取绝对值，y坐标相减取绝对值，两个结果在相加。
+                    top.F = top.G + top.H;
+                    if (IsTheCurrentInArr(top, openList, closeList) == false) {
+                        openList.push(top);
+                    };
+                };
+                let bottom = null;
+                if (canTheNodeBeUsed([current.node[0], current.node[1] + 1], obstacleArr, xLen, yLen)) {
+                    bottom = {
+                        "node": [current.node[0], current.node[1] + 1],
+                        "G": current.G + 1,
+                        "H": null,
+                        "F": null,
+                        "parentNode": current//父节点
+                    };
+                    bottom.H = (Math.abs(bottom.node[0] - end[0]) + Math.abs(bottom.node[1] - end[1]));//曼哈顿距离，两个点坐标的x坐标相减取绝对值，y坐标相减取绝对值，两个结果在相加。
+                    bottom.F = bottom.G + bottom.H;
+                    if (IsTheCurrentInArr(bottom, openList, closeList) == false) {
+                        openList.push(bottom);
+                    };
+                };
+                let left = null;
+                if (canTheNodeBeUsed([current.node[0] - 1, current.node[1]], obstacleArr, xLen, yLen)) {
+                    left = {
+                        "node": [current.node[0] - 1, current.node[1]],
+                        "G": current.G + 1,
+                        "H": null,
+                        "F": null,
+                        "parentNode": current//父节点
+                    };
+                    left.H = (Math.abs(left.node[0] - end[0]) + Math.abs(left.node[1] - end[1]));//曼哈顿距离，两个点坐标的x坐标相减取绝对值，y坐标相减取绝对值，两个结果在相加。
+                    left.F = left.G + left.H;
+                    if (IsTheCurrentInArr(left, openList, closeList) == false) {
+                        openList.push(left);
+                    };
+                };
+                let right = null;
+                if (canTheNodeBeUsed([current.node[0] + 1, current.node[1]], obstacleArr, xLen, yLen)) {
+                    right = {
+                        "node": [current.node[0] + 1, current.node[1]],
+                        "G": current.G + 1,
+                        "H": null,
+                        "F": null,
+                        "parentNode": current//父节点
+                    };
+                    right.H = (Math.abs(right.node[0] - end[0]) + Math.abs(right.node[1] - end[1]));//曼哈顿距离，两个点坐标的x坐标相减取绝对值，y坐标相减取绝对值，两个结果在相加。
+                    right.F = right.G + right.H;
+                    if (IsTheCurrentInArr(right, openList, closeList) == false) {
+                        openList.push(right);
+                    };
+                };
+            };
+            //检查是否寻路成功，成功则把走过的路径保存到数组里，返回，反之返回-1
+            if (current.node.toString() == end.toString()) {
+                console.log(openList);
+                console.log(closeList);
+                let route = [];
+                let closeListLen = closeList.length;
+                /**
+                 * 根据parentNode寻找走的路线
+                 * node 当前节点
+                 */
+                let getRoute = function (node) {
+                    if (node.parentNode != null) {
+                        return [].concat(node, getRoute(node.parentNode))
+                    } else {
+                        return node;
+                    }
+                };
+                return getRoute(current).reverse();
+            } else {
+                return -1
+            }
+        };
+
+        /**
+         * a*寻路算法的辅助方法，查找openlist内F值最小的节点
+         * arr 数组 传入的openlist数组
+         * return 返回openlist中F值最小的坐标和坐标：
+         */
+        function findTheMinimumNode(arr) {
+            let arrLen = arr.length;
+            if (arrLen == 1) {
+                return {
+                    "node": arr[0],
+                    "index": 0
+                };
+            } else {
+                //找出了F最小的
+                let minIndex = 0;
+                for (let i = 0; i < arrLen; i++) {
+                    if (arr[minIndex].F > arr[i].F) {
+                        minIndex = i;
+                    }
+                };
+                //找列表内这个最小的,的相同的
+                let minArr = [];
+                for (let i = 0; i < arrLen; i++) {
+                    if (arr[minIndex].F == arr[i].F) {
+                        minArr.push({
+                            "node": arr[i],
+                            "index": i
+                        });
+                    }
+                };
+                let minArrLen = minArr.length;
+                if (minArrLen == 1) {
+                    return minArr[0];
+                } else {
+                    //相同的里面找G值最小的（距离起点最近的）
+                    let minIndex2 = 0;
+                    for (let i = 0; i < minArrLen; i++) {
+                        if (minArr[minIndex2].node.H > minArr[i].node.H) {
+                            minIndex2 = i;
+                        }
+                    }
+                    return minArr[minIndex2];
+                };
+            };
+        };
+        /**
+         * a*寻路算法的辅助方法，查找当前点是否可到达（是否出了地图边界，是否在障碍物上）
+         * current 数组 当前点
+         * obstacleArr 数组 障碍物坐标值
+         * xLen 数值 地图x轴长度
+         * yLen 数组 地图Y轴长度
+         * return 布尔 可到达（没有出地图，没有在地图边界上）返回true，反之false
+         */
+        function canTheNodeBeUsed(current, obstacleArr, xLen, yLen) {
+            //检查是否超出地图边界
+            if (current[0] + 1 >= xLen || current[1] + 1 >= yLen) {
+                return false;
+            }
+            //检查是否在障碍物上
+            let len = obstacleArr.length;
+            for (let i = 0; i < len; i++) {
+                if (current.toString() == obstacleArr[i].toString()) {
+                    return false;
+                    break;
+                }
+            }
+            return true;
+        };
+        /**
+         * a*寻路算法的辅助方法，查找当前点是否已在openlist或closelist中
+         * currentNode 对象 当前节点
+         * arr 数组 传入的openlist数组
+         * arr2 数组 传入的closelist数组
+         * return 布尔 已在数组中返回true，反之false
+         */
+        function IsTheCurrentInArr(currentNode, arr, arr2) {
+            let len = arr.length;
+            let arrStatus = false;//是否在openlist中，false不在，true在
+            for (let i = 0; i < len; i++) {
+                if (currentNode.node.toString() == arr[i].node.toString()) {
+                    arrStatus = true;
+                    break;
+                }
+            }
+            let len2 = arr2.length;
+            let arr2Status = false;//是否在closelist中，false不在，true在
+            for (let i = 0; i < len2; i++) {
+                if (currentNode.node.toString() == arr2[i].node.toString()) {
+                    arr2Status = true;
+                    break;
+                }
+            }
+            return arrStatus || arr2Status;
+        };
+
+        //实验使用A*寻路算法
+        //障碍物坐标数组
+        let zhangaiwuArr = [[3, 12], [4, 12], [5, 12], [6, 12], /*[6, 13],*/[6, 14], [5, 14], [4, 14], [3, 14], [3, 13]];
+        let route = a_search([2, 13], [6, 13], zhangaiwuArr, 20, 20);
+        let routeLen = route.length;
+        console.log(route);
+        for (let i = 0; i < routeLen; i++) {
+            let className = "child-" + route[i].node[0] + "-" + route[i].node[1];
+            let child = document.getElementsByClassName(className)[0];
+            if (i == 0 || i == routeLen - 1) {
+                child.style.background = "#DB4F43";
+            } else {
+                child.style.background = "#1B9F60";
+            }
+            child.innerHTML = i;
+        }
+        //渲染障碍物
+        for (let i = 0; i < zhangaiwuArr.length; i++) {
+            let className = "child-" + zhangaiwuArr[i][0] + "-" + zhangaiwuArr[i][1];
+            let child = document.getElementsByClassName(className)[0];
+            child.style.background = "#86867A";
+        }
+    </script>
+    <script>
+        /**
+         * 旧寻路方法（暂不使用）
+         * 获取某点到某点的最佳方向
+         * current 字符串 当前点
+         * end 字符串 目标点
+         * return 数组 最佳放点点
+        */
+        function getBestDirection(current, end) {
+            var current = current.split(',');
+            current[0] = parseInt(current[0]);
+            current[1] = parseInt(current[1]);
+            var end = end.split(',');
+            end[0] = parseInt(end[0]);
+            end[1] = parseInt(end[1]);
+            //找最佳方向
+            var bestArr = [];//最佳的方向点
+            //x轴判断往哪个方向前进
+            if (current[0] > end[0]) {
+                //x轴上（左小右大）当前 点坐标 在 结束点坐标 的后面(在结束点的右边)
+                bestArr[0] = current[0] - 1;
+            } else if (current[0] < end[0]) {
+                //x轴上（左小右大）当前 点坐标 在 结束点坐标 的前面(在结束点的左边)
+                bestArr[0] = current[0] + 1;
+            } else {
+                //x轴上（左小右大）当前 点坐标 和 结束点坐标 在同一列上
+                bestArr[0] = current[0]
+            }
+            //y轴判断往哪个方向前进
+            if (current[1] > end[1]) {
+                //y轴上（上小下大）当前 点坐标 在 结束点坐标 的下面(在结束点的下边)
+                bestArr[1] = current[1] - 1;
+            } else if (current[1] < end[1]) {
+                //y轴上（上小下大）当前 点坐标 在 结束点坐标 的上面(在结束点的上边)
+                bestArr[1] = current[1] + 1;
+            } else {
+                //y轴上（上小下大）当前 点坐标 和 结束点坐标 在同一行上
+                bestArr[1] = current[1];
+            }
+            return bestArr;
+        }
+        //不考虑障碍物的情况下，寻找当前点到终点最近的路线
+        /**
+         * 旧寻路方法（暂不使用）
+         * current 字符串 当前点
+         * end 字符串 终点
+         * return 数组 最佳路线
+         */
+        function findTheNearestRoute(current, end) {
+            if (current === end) {
+                //到达终点
+                return [current];
+            }
+            //找最佳方向
+            var bestArr = getBestDirection(current, end).join(',');
+            return [].concat(current, findTheNearestRoute(bestArr, end));
+        };
+    </script>
+</body>
+
+</html>

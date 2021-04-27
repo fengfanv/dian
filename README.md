@@ -11,10 +11,11 @@
 
 3、保护小羊的小游戏（完成状态：0%，难度：2分）
 
+[开始游戏](https://fengfanv.github.io/dian/protectLamb/index.html)
+
 ---
 
-**中型游戏**
 
 1、和平之光（游戏剧本完成状态：10%，完成状态：0%，难度：5分）
 
-[查看项目](https://github.com/fengfanv/theLightOfPeace)
+[查看项目](https://github.com/fengfanv/JS-library/blob/master/theLightOfPeace)

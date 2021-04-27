@@ -1,0 +1,115 @@
+* {
+    margin: 0px;
+    padding: 0px;
+}
+
+body {
+    background: #777777;
+}
+
+#container {
+    margin: 0 auto;
+    background: white;
+    overflow: hidden;
+    position: relative;
+}
+
+#button {
+    text-align: center;
+    cursor: pointer;
+}
+
+.button0 {
+    /*游戏未开始状态*/
+    width: 100%;
+    height: 200px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    margin: auto;
+}
+.button0::after {
+    content: "开始";
+    display: block;
+    width: 100%;
+    height: 200px;
+    color: rgb(206, 103, 0);
+    line-height: 200px;
+    font-size: 80px;
+}
+
+.button1 {
+    /*按钮，游戏运行时状态*/
+    width: 80px;
+    height: 40px;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+.button1::after {
+    content: "暂停";
+    display: block;
+    width: 80px;
+    height: 40px;
+    color: rgb(206, 103, 0);
+    line-height: 40px;
+    font-size: 28px;
+}
+
+.button2 {
+    /*按钮，游戏暂停状态*/
+    width: 100%;
+    height: 200px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    margin: auto;
+}
+.button2::after {
+    content: "继续";
+    display: block;
+    width: 100%;
+    height: 200px;
+    color: rgb(206, 103, 0);
+    line-height: 200px;
+    font-size: 80px;
+}
+
+.button3 {
+    /*按钮，游戏暂停状态*/
+    width: 100%;
+    height: 200px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    margin: auto;
+}
+.button3::after {
+    content: "重新开始";
+    display: block;
+    width: 100%;
+    height: 200px;
+    color: rgb(206, 103, 0);
+    line-height: 200px;
+    font-size: 80px;
+}
+
+#gameScore {
+    width: 60px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 28px;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    display: block;
+    text-align: center;
+    color: #CE6700;
+}
+

@@ -1,7 +1,7 @@
 const http = require('http')
 const fs = require('fs')
-const url = require('url')
 const path = require('path')
+const child_process = require("child_process")
 
 function app(request, response) {
     response.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,7 +21,10 @@ function app(request, response) {
         return false;
     };
 
-    var pathname = url.parse(request.url).pathname;
+    var pathname = request.url;
+    if(/(^.+\/$|^\/$)/.test(pathname)){
+        pathname+='index.html'
+    }
     var filepath = path.join(__dirname, decodeURI(pathname));
     fs.stat(filepath, function (err, stat) {
         if (err) {
@@ -31,6 +34,7 @@ function app(request, response) {
             fs.readFile(filepath, function (err, res) {
                 if (err) {
                     console.log(err);
+                    console.log('1111');
                 }
                 response.writeHead(200)
                 response.end(res);
@@ -42,3 +46,22 @@ function app(request, response) {
 http.createServer(app).listen(80, () => {
     console.log('端口：80，服务已启动！');
 });
+
+// //打开默认浏览器
+// const openUrl = "http://localhost"
+// const port = 80
+// let cmd = ''
+// switch (process.platform) {
+//     case 'wind32':
+//         cmd = 'start';
+//         break;
+
+//     case 'linux':
+//         cmd = 'xdg-open';
+//         break;
+
+//     case 'darwin':
+//         cmd = 'open';
+//         break;
+// }
+// child_process.exec(cmd + ' ' + openUrl + ':' + port);

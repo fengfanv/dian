@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作战单位行走路线动态规划</title>
+    <style>
+        #app {
+            width: calc(20 * 30px + (20 * 1px));
+            /*一共有20列，就有19个右边（最后一个列没有右边），每个右边宽1px*/
+            height: calc(20 * 30px + (20 * 1px));
+            /*每列有20个子元素，就有19个下边（最后一个没有下边），每个下边宽1px*/
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .column {
+            height: calc(20 * 30px + (20 * 1px));
+            /*每列有20个子元素，就有19个下边（最后一个没有下边），每个下边宽1px*/
+            width: 31px;
+            display: inline-block;
+            overflow: auto;
+        }
+
+        .child {
+            width: 30px;
+            height: 30px;
+            font-size: 10px;
+            text-align: center;
+            line-height: 30px;
+        }
+
+        #theRightRouteList button {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>作战单位行走路线动态规划</h1>
+    <p>作战单位从 'A点' 到 'B点' 的路径</p>
+    <p>使用算法：强化学习算法</p>
+
+    <hr>
+    <div id="app">
+
+    </div>
+    <!--路径结果列表-->
+    <ul id="theRightRouteList">
+
+    </ul>
+    <script>
+        var xLen = 20;//x轴方格数量
+        var yLen = 20;//y轴方格数量
+
+        //生成数组
+        var xArr = [];
+        for (let i = 0; i < xLen; i++) {
+            let yArr = [];
+            for (let j = 0; j < yLen; j++) {
+                yArr.push(i + ',' + j);
+            }
+            xArr.push(yArr);
+        }
+        console.log(xArr);
+
+        //渲染方格到页面
+        var app = document.getElementById('app');
+        for (let i = 0; i < xArr.length; i++) {
+            var column = document.createElement('div');
+            column.className = "column"
+            for (let j = 0; j < xArr[i].length; j++) {
+                var child = document.createElement('div');
+                child.className = "child child-" + i + "-" + j;
+                if (i + 1 != xArr.length) {
+                    child.style.borderRight = "1px solid black";
+                }
+                if (j + 1 != xArr[i].length) {
+                    child.style.borderBottom = "1px solid black";
+                }
+                column.appendChild(child);
+            }
+            app.appendChild(column);
+        }
+
+        //渲染障碍物
+        let zhangaiwuArr = [[10, 5], [10, 6], [10, 7], [10, 8], [10, 9], [10, 10], [10, 11], [10, 12], [10, 13]];
+        for (let i = 0; i < zhangaiwuArr.length; i++) {
+            let className = "child-" + zhangaiwuArr[i][0] + "-" + zhangaiwuArr[i][1];
+            let child = document.getElementsByClassName(className)[0];
+            child.style.background = "#86867A";
+        }
+
+
+        /**
+         * 算法名称：强化学习算法
+         * 算法思想网址：
+         * 四要素：agent、环境状态、动作和奖励，目标是获得最多的累计奖励
+         * 算法流程：1、初始化Q表，2、从Q表选择动作，3、执行动作，4、衡量奖励，5、更新Q表，2-5循环，最终得到一个学习好的Q表
+         * Q表：算法最终要学习到一张好的 Q表，这样我们就可以根据 Q表对环境中的任何情况（状态）都能给出一个好的反应（动作），
+         * Q表一般用二维数组表示，每一行表示一个状态，每一列表示一个动作
+         * reward表：每个动作的奖励表，数据解构和Q表一样
+         * 
+         */
+        var Q = [];
+        var reward = [];//奖励表
+
+        var startNode = [5, 9];//起点坐标
+        var endNode = [15, 8];//终点坐标
+
+        //这里Q表的每个状态是每个方块，每个状态有四个动作，上下左右
+
+        //初始化Q表和奖励表
+        for (let i = 0; i < xLen; i++) {
+            for (let j = 0; j < yLen; j++) {
+                //这里初始化q表时，不是所有状态都有4个动作，在边界的不能越界
+                let actionArr = [];//动作数组
+                for (let k = 0; k < 4; k++) {
+                    let direction = '';//当前状态的四个动作的方向
+                    let y = 0;//上下
+                    let x = 0;//左右
+                    if (k == 0) {
+                        direction = '上'
+                        y = -1;
+                        x = 0;
+                    } else if (k == 1) {
+                        direction = '下'
+                        y = 1;//向下y轴加一
+                        x = 0;
+                    } else if (k == 2) {
+                        direction = '左'
+                        y = 0;//向左x轴减一
+                        x = -1;
+                    } else if (k == 3) {
+                        direction = '右'
+                        y = 0;//向右x轴加一
+                        x = 1;
+                    }
+                    if (i + x < 0 || i + x >= xLen || j + y < 0 || j + y >= yLen) {
+                        actionArr[k] = {
+                            'dirction': direction,
+                            'state': -1,
+                            'reward': -1,//获得的奖励
+                        }
+                    } else {
+                        //这个状态的动作没有出界的
+                        actionArr[k] = {
+                            'dirction': direction,
+                            'state': [i + x, j + y],
+                            'reward': 0,//获得的奖励
+                        }
+                    }
+                }
+                Q.push({
+                    state: [i, j],
+                    action: actionArr
+                })
+
+
+
+                if (checkZhangaiwu([i, j])) {
+                    //当前是障碍物
+                    reward.push({
+                        state: [i, j],//那个方块
+                        reward: -100//奖励
+                    });
+
+                } else {
+                    //不是障碍物
+                    //检查当前是否是结束点
+                    if (endNode.join() == [i, j].join()) {
+                        //当前是结束点
+                        reward.push({
+                            state: [i, j],//那个方块
+                            reward: 100//终点奖励100分
+                        });
+                    } else {
+                        reward.push({
+                            state: [i, j],//那个方块
+                            reward: 30-(Math.abs(i - endNode[0]) + Math.abs(j - endNode[1])) //奖励，这里的100是我随意定的，只是为了让分数更合理
+                            //这里如果不是障碍物，当前点到终点的距离越近奖励的分数越高
+                        });
+                    }
+
+
+                }
+
+            }
+        }
+
+        //检查当前点是否是障碍物
+        function checkZhangaiwu(current) {
+            let len = zhangaiwuArr.length;
+            for (let i = 0; i < len; i++) {
+                if (current.join() == zhangaiwuArr[i].join()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        console.log(Q);
+        console.log(reward);
+
+
+        for (let i = 0; i < reward.length; i++) {
+            document.getElementsByClassName('child-' + reward[i].state.join('-'))[0].innerHTML = reward[i].reward;
+        }
+
+
+
+        var epsilon = 0.8;//获得动作，使用什么策略，这里控制agent的贪婪程度，例如 epsilon = 0.9，表示 90% 的时间使用Q表做决策，10%的时间随机选择动作来探索未知的环境
+
+        var alpha = 0.2;//学习速率
+
+        var gamma = 0.8;//衰减因子
+
+        function Qlearning() {
+            for (let i = 0; i < 2000; i++) {
+                let currentNode = startNode;//当前点默认为起始点
+
+                //不到达目标地点，则不结束，当前一轮的学习，直到到达目标地点才进行下一次的学习
+                while (currentNode.join() != endNode.join()) {
+                    let action = null;//当前状态将要选择的动作，这里是动作的坐标
+                    if (Math.random() < epsilon) {
+                        //通过Q表选择动作
+                        action = max(currentNode);//直接返回动作的坐标
+                    } else {
+                        //随机选择可行动作
+                        action = randomAction(currentNode);//直接返回动作的坐标
+                    };
+                    let rewardValue = 0;//获取这个动作的奖励
+                    let rewardLen = reward.length;
+                    for (let k = 0; k < rewardLen; k++) {
+                        if (reward[k].state.join() == action.join()) {
+                            rewardValue = reward[k].reward;
+                            break;
+                        }
+                    }
+                    //更新Q表
+                    let QLen = Q.length;
+                    for (let y = 0; y < QLen; y++) {
+                        if (Q[y].state.join() == currentNode.join()) {
+                            let actionLen = Q[y].action.length;
+                            for (let p = 0; p < actionLen; p++) {
+                                if (Q[y].action[p].state != -1) {
+                                    if (Q[y].action[p].state.join() == action.join()) {
+                                        //强化学习算法，最重要的核心，奖励更新公式
+                                        Q[y].action[p].reward = (1 - alpha) * Q[y].action[p].reward + alpha * (rewardValue + gamma * maxActionQ(action));
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    //更新完毕，切换到下一个状态
+                    currentNode = action;
+                }
+                console.log('第', i + 1, '轮训练');
+
+
+                if (i + 1 == 2000) {
+                    //呈现400次学习的成果
+                    let current = startNode;
+                    let num = 0;
+                    while (current.join() != endNode.join() && num < 100) {
+                        console.log(current);
+                        let action = max(current);
+                        current = action;
+                        num++
+                    }
+                }
+
+            }
+        }
+
+        setTimeout(() => {
+            console.log('开始学习~');
+            Qlearning()
+        }, 1000)
+
+
+        //获取Q表里某个状态的最高分数动作，的坐标，或奖励分数
+        function max(node, type) {
+            let len = Q.length;
+            for (let i = 0; i < len; i++) {
+                if (node.join() == Q[i].state.join()) {
+                    let actionArr = [];
+                    //把可用的动作放到actionArr里
+                    for (let j = 0; j < Q[i].action.length; j++) {
+                        if (Q[i].action[j].reward != -1) {
+                            actionArr.push(Q[i].action[j]);
+                        }
+                    }
+                    let actionLen = actionArr.length;
+                    let max_index = 0;//取得到奖励分数最大的
+                    let max_reward = -1;//默认是第一个
+                    for (let j = 0; j < actionLen; j++) {
+                        if (actionArr[j].reward > max_reward) {
+                            max_reward = actionArr[j].reward;
+                            max_index = j;
+                        }
+                    }
+                    if (typeof type == 'undefined') {
+                        return actionArr[max_index].state;
+                    } else {
+                        return actionArr[max_index].reward
+                    }
+                }
+            }
+        }
+
+        //随机获取某个状态里的动作，这里直接返回动作的坐标
+        function randomAction(node) {
+            let len = Q.length;
+            for (let i = 0; i < len; i++) {
+                if (node.join() == Q[i].state.join()) {
+                    let actionArr = [];
+                    //把可用的动作放到actionArr里
+                    for (let j = 0; j < Q[i].action.length; j++) {
+                        if (Q[i].action[j].reward != -1) {
+                            actionArr.push(Q[i].action[j]);
+                        }
+                    }
+                    let actionArrLen = actionArr.length;
+                    let random = Math.floor(Math.random() * actionArrLen);
+                    return actionArr[random].state;
+                }
+            }
+        }
+        //获取将要切换的下一个状态里最高分数动作的分数
+        function maxActionQ(node) {
+            return max(node, 'reward')//max方法带reward参数，直接返回q表里，这个状态的最高分数动作的分数
+        }
+
+
+
+
+    </script>
+</body>
+
+</html>

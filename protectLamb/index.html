@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>protect lamb | 小游戏</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <div id="container">
+
+        <!--gameScore 游戏分数-->
+        <div id='gameScore'></div>
+        <!--canvas 游戏渲染区域-->
+        <canvas id="canvas"></canvas>
+        <!--button 开始，暂停，继续，重新开始按钮-->
+        <div id='button'></div>
+
+
+    </div>
+
+    <script src="./js/public.js"></script>
+    <script>
+
+        //入口方法
+        function main() {
+
+            //1、初始化页面环境
+            let container = document.getElementById("container");
+            let screenWidth = document.documentElement.clientWidth;//屏幕的宽
+            let screenHeight = document.documentElement.clientHeight;//屏幕的高
+
+            let containerWidth = 0;//容器宽
+            let containerHeight = 0;//容器高
+
+            //兼容显示器，让游戏已9比16的矩形显示
+            if (screenWidth > 768) {
+                containerWidth = 9 / 16 * screenHeight;// newWidth/newHeight=9/16
+                containerHeight = screenHeight;
+            } else {
+                containerWidth = screenWidth;
+                containerHeight = screenHeight;
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+
+            //2、初始化canvas环境
+            let canvas = document.getElementById("canvas");
+            canvas.width = containerWidth;
+            canvas.height = containerHeight;
+            let ctx = canvas.getContext('2d');//生成一个canvas的实例
+
+
+            //3、初始化游戏环境
+            //初始化一张地图
+            let map_a = new Map(ctx, containerWidth, containerHeight);
+            // let blockIndex = 0;
+            // let isOk = true;
+            let blockLen = map_a.blocks.length;
+            console.log(map_a);
+
+            //给canvas绑定触摸事件
+            if (checkBrowser() == 'pc') {
+                canvas.onmousedown = canvas_touchstart;
+                canvas.onmousemove = canvas_touchmove;
+                canvas.onmouseup = canvas_touchend;
+            } else {
+                //手机环境
+                canvas.ontouchstart = canvas_touchstart;
+                canvas.ontouchmove = canvas_touchmove;
+                canvas.ontouchend = canvas_touchend;
+            }
+
+
+            let hasTouched = false;
+            let eventTouchArr = [];//本次触摸触发事件的小格子
+            function canvas_touchstart(e) {
+                let layerX = 0;
+                let layerY = 0;
+                if (e.type == 'touchstart') {
+                    layerX = e.changedTouches[0].pageX;
+                    layerY = e.changedTouches[0].pageY;
+                } else {
+                    layerX = e.layerX;
+                    layerY = e.layerY;
+                }
+                //1、检测是否触摸在地图内
+                if (layerX >= map_a.x && layerX < map_a.x + map_a.width && layerY >= map_a.y && layerY < map_a.y + map_a.height) {
+                    hasTouched = true;
+                    console.log('触摸在地图-里面');
+                    //2、检查触摸的是哪一个小格子
+                    for (let i = 0; i < map_a.blocks.length; i++) {
+                        if (layerX >= map_a.blocks[i].x && layerX < map_a.blocks[i].x + map_a.blocks[i].width && layerY >= map_a.blocks[i].y && layerY < map_a.blocks[i].y + map_a.blocks[i].height) {
+                            console.log(i,map_a.blocks[i]);
+                        }
+
+                    }
+                } else {
+                    console.log('触摸在地图-外面');
+                }
+
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            function canvas_touchmove(e) {
+                if (hasTouched == true) {
+                    let layerX = 0;
+                    let layerY = 0;
+                    if (e.type == 'touchmove') {
+                        layerX = e.changedTouches[0].pageX;
+                        layerY = e.changedTouches[0].pageY;
+                    } else {
+                        layerX = e.layerX;
+                        layerY = e.layerY;
+                    }
+                    console.log('触发移动事件');
+                }
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            function canvas_touchend(e) {
+                hasTouched = false;
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
+
+
+            //4、运行环境
+            let renderTimer = 100;//渲染时间间隔，0.1s
+            setInterval(() => {
+                //清空画布
+                ctx.clearRect(0, 0, containerWidth, containerHeight);
+
+
+
+                // //渲染地图上的小格子
+                // if (blockIndex < blockLen && isOk) {
+                //     isOk = false;
+                //     map_a.blocks[blockIndex].display = true;
+                //     blockIndex++;
+                //     setTimeout(function () {
+                //         for (let i = 0; i < blockLen; i++) {
+                //             map_a.blocks[i].display = false;
+                //         }
+                //         if(blockIndex==blockLen){
+                //             blockIndex = 0;
+                //         }
+                //         isOk = true;
+                //     }, 500)
+                // }
+
+                for (let i = 0; i < blockLen; i++) {
+                    map_a.blocks[i].render();
+                }
+
+                //渲染地图
+                map_a.render();
+
+
+
+
+            }, renderTimer);
+
+
+
+
+
+        }
+        main();
+
+
+        //游戏地图构建对象
+        function Map(ctx, containerWidth, containerHeight) {
+
+            //获取游戏环境大小
+            this.containerWidth = containerWidth;
+            this.containerHeight = containerHeight;
+
+            //地图有x轴,y轴多少个块
+            this.numberX = 8;
+            this.numberY = 8;
+
+            //地图大小
+            this.width = containerWidth;
+            this.height = containerWidth;
+
+            //地图位置
+            this.x = 0;
+            this.y = (containerHeight - this.height) / 2;
+
+            //定义小格子
+            this.blocks = [];//装小格子的数组
+            //小格子的大小
+            this.blockWidth = this.width / this.numberX;
+            this.blockHeight = this.blockWidth;
+            let blockNumber = 0;
+            for (let i = 0; i < this.numberX; i++) {
+                for (let j = 0; j < this.numberY; j++) {
+                    blockNumber++;
+                    let indexArr = [i, j];
+                    let blockX = this.x + (j * this.blockWidth);
+                    let blockY = this.y + (i * this.blockHeight);
+                    let blockItem = new MapBlocks(ctx, blockNumber, indexArr, blockX, blockY, this.blockWidth, this.blockHeight);
+                    // blockItem.display = false;
+                    this.blocks.push(blockItem);
+                }
+            }
+
+            //渲染地图到页面上
+            this.render = function () {
+
+                //画用于区分小格子的线
+                //x轴，画竖着的线
+                for (let i = 0; i < this.numberX - 1; i++) {
+                    ctx.beginPath();//开始一个新路径
+                    ctx.moveTo((i + 1) * this.blockWidth, this.y + 0);
+                    ctx.lineTo((i + 1) * this.blockWidth, this.y + this.height);
+                    ctx.stroke();
+                }
+                //y轴，画横着的线
+                for (let j = 0; j < this.numberY - 1; j++) {
+                    ctx.beginPath();//开始一个新路径
+                    ctx.moveTo(0, this.y + ((j + 1) * this.blockHeight));
+                    ctx.lineTo(this.width, this.y + ((j + 1) * this.blockHeight));
+                    ctx.stroke();
+                }
+
+            }
+
+
+
+
+        }
+
+        //地图内小方块构造函数
+        function MapBlocks(ctx, id, indexArr, blockX, blockY, blockWidth, blockHeight) {
+            //小格子的id
+            this.id = id;
+
+            //小格子的下标值数组，如[1,1]
+            this.index = indexArr;
+
+            //小格子的大小
+            this.width = blockWidth;
+            this.height = blockHeight;
+
+            //小格子的位置
+            this.x = blockX;
+            this.y = blockY;
+
+            //小格子的内容
+            this.content = "";//用来承载一些东西，如，小羊的实例，柱子的实例，暂时这么设想
+
+            //小格子的背景色
+            this.backgroundColor = "#225a1f";
+
+            //是否显示小格子
+            this.display = true;
+
+            //渲染格子到canvas
+            this.render = function () {
+
+                //渲染小格子
+                if (this.display) {
+                    ctx.beginPath();//开始一个新路径
+                    ctx.fillStyle = this.backgroundColor;
+                    ctx.rect(this.x, this.y, this.width, this.height);
+                    ctx.fill();//闭合路径
+                }
+
+                // //渲染小格子上的实例，如小鸟实例，柱子实例
+                // if (typeof this.content == "object" && typeof this.cotent.render == 'function') {
+                //     this.cotent.render();
+                // }
+
+            }
+        }
+
+
+
+    </script>
+
+</body>
+
+</html>
