@@ -56,10 +56,8 @@
                 containerWidth = screenWidth;
                 containerHeight = screenHeight;
             }
-
             container.style.width = containerWidth + 'px';
             container.style.height = containerHeight + 'px';
-
 
 
             //2、初始化canvas环境
@@ -82,7 +80,7 @@
             let pillar_a = new Pillar(ctx, containerWidth, containerHeight);//创建第一个柱子
             pillarArr.push(pillar_a);
 
-            //给按钮绑事件
+            //为按钮绑事件
             let button = document.getElementById("button");
             button.setAttribute('class', 'button0');//初始化按钮样式
             button.onclick = function () {
@@ -136,9 +134,12 @@
                 }
             }
 
+            //实例化背景图对象
+            let gamebackground_a = new GameBackground(ctx, containerWidth, containerHeight);
+
 
             //4、运行环境
-            let renderTimer = 100;//渲染时间间隔，0.1s
+            let renderTimer = 33;//渲染时间间隔，每秒渲染30针帧
             setInterval(() => {
                 if (gameState == 2 || gameState == 3) {
                     return false;//游戏暂停时，和游戏失败时，不用渲染
@@ -148,6 +149,7 @@
 
                 //渲染游戏背景
                 //？
+                gamebackground_a.render();
 
                 //渲染小鸟，游戏未开始时不渲染小鸟到页面上
                 if (gameState != 0) {
@@ -221,37 +223,43 @@
             this.x = this.containerWidth / 2;
             this.y = this.containerHeight / 2;
 
-            //小鸟往下掉落的速度
-            this.downSpeed = 5;
+            //小鸟旋转的度数
+            this.deg = 0;//小于0度，小鸟抬头。大于0度，小鸟低头
 
-            //每次点击屏幕，上升的速度
-            this.upSpeed = 100;
+            //小鸟往下掉落的速度
+            this.downSpeed = 2.6;
+
+            //每次点击屏幕，小鸟上升的速度
+            this.upSpeed = 50;
+
+            //每次小鸟下落，低头的度数
+            this.downDeg = 1;
 
 
             //action 小鸟的动作
             //向上的动作
             this.actionUp = function () {
                 this.y = this.y - this.upSpeed;
+                this.deg = -6;
             }
             //向下的动作
             this.actionDown = function () {
                 this.y = this.y + this.downSpeed;
+                this.deg = this.deg + this.downDeg;
             }
 
 
             //渲染小鸟到画布上
             this.render = function () {
-                //没有小鸟图片，暂时先用一个圆代替
-                ctx.beginPath();//开始一个新路径
-                ctx.fillStyle = this.backgroundColor;
-                //这个圆形是已中心点为x，y的坐标的，所以我在这里加上了圆的宽与高的各一半，让圆的的x，y起始点变为左上角
-                ctx.arc(this.x + (this.width / 2), this.y + (this.height / 2), this.width / 2, 0, Math.PI * 2, true);
-                ctx.fill();//闭合路径
 
+                //这个线为碰撞检测的线
                 ctx.beginPath();//开始一个新路径
                 ctx.strokeStyle = this.backgroundColor;
                 ctx.rect(this.x, this.y, this.width, this.height);
                 ctx.stroke();//闭合路径
+
+                //渲染小鸟图片
+                ctx.drawImage(this.createBirdImage(), this.x - 10, this.y - 10)
 
             }
 
@@ -259,6 +267,58 @@
             this.resetBirdPosition = function () {
                 this.x = this.containerWidth / 2;
                 this.y = this.containerHeight / 2;
+            }
+
+
+            //创建小鸟图片构造方法，这样写，主要是想让小鸟能低头与抬头，旋转小鸟
+            this.createBirdImage = function () {
+                //准备两个canvas实例，一个用来初始化图像(imgCanvas)，另一个用来旋转这个图像(rotateImgCanvas)
+                let imgCanvas = document.createElement('canvas');
+                let imgCtx = imgCanvas.getContext('2d');
+
+                let rotateImgCanvas = document.createElement('canvas');
+                let rotateImgCtx = rotateImgCanvas.getContext('2d');
+
+                //图像的大小
+                imgCanvas.width = this.width;
+                imgCanvas.height = this.height;
+
+                //这里70是因为，宽高50的正方形，旋转45度后，正方形上边 距离 下边的高度，也就是正方形的斜边长，是70
+                rotateImgCanvas.width = Math.sqrt((this.width*this.width)+(this.height*this.height));
+                rotateImgCanvas.height = Math.sqrt((this.width*this.width)+(this.height*this.height));
+
+                //先把图像，渲染到imageCtx上
+                //没有小鸟图片，暂时先用一个圆代替，和一个方框代替
+                imgCtx.beginPath();//开始一个新路径
+                imgCtx.fillStyle = this.backgroundColor;
+                //这个圆形是已中心点为x，y的坐标的，所以我在这里加上了圆的宽与高的各一半，让圆的的x，y起始点变为左上角
+                imgCtx.arc(this.width/2,this.height/2,this.width/2, 0, Math.PI * 2, true);
+                imgCtx.fill();//闭合路径
+
+                imgCtx.beginPath();//开始一个新路径
+                imgCtx.strokeStyle = "#000000";
+                imgCtx.rect(0, 0, this.width, this.height);
+                imgCtx.stroke();//闭合路径
+
+
+                //再改变rotateImgCanvas的x，y坐标的中心点
+                rotateImgCtx.translate(
+                    rotateImgCanvas.width / 2,
+                    rotateImgCanvas.height / 2
+                );
+
+                //再旋转rotateImgCanvas
+                rotateImgCtx.rotate((this.deg * Math.PI) / 180);
+
+                //再再把需要旋转的图像，绘制到rotateImgCanvas里
+                rotateImgCtx.drawImage(
+                    imgCanvas,
+                    -this.width / 2,
+                    -this.height / 2
+                );
+
+                //返回旋转后的canvas图像
+                return rotateImgCanvas
             }
 
         }
@@ -278,7 +338,7 @@
             this.containerHeight = containerHeight;
 
             //porperty 柱子的属性
-            this.leftSpeed = 5;//柱子往左移动的速度
+            this.leftSpeed = 2;//柱子往左移动的速度
 
             this.width = Math.floor(this.containerWidth / 6);//柱子的宽度
 
@@ -397,6 +457,29 @@
                 return false;
             }
 
+
+        }
+
+
+        //有背景图构造函数
+        function GameBackground(ctx, containerWidth, containerHeight) {
+            //获取游戏环境大小
+            this.containerWidth = containerWidth;
+            this.containerHeight = containerHeight;
+
+
+
+
+            //渲染背景图到画布上
+            this.render = function () {
+                let grd = ctx.createLinearGradient(0, 0, 0, this.containerHeight);
+                grd.addColorStop(0, "#303368");
+                grd.addColorStop(1, "#517FB0");
+                ctx.fillStyle = grd;
+                ctx.fillRect(0, 0, this.containerWidth, this.containerHeight);
+                ctx.fill();
+
+            }
 
         }
 

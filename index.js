@@ -46,22 +46,3 @@ function app(request, response) {
 http.createServer(app).listen(80, () => {
     console.log('端口：80，服务已启动！');
 });
-
-// //打开默认浏览器
-// const openUrl = "http://localhost"
-// const port = 80
-// let cmd = ''
-// switch (process.platform) {
-//     case 'wind32':
-//         cmd = 'start';
-//         break;
-
-//     case 'linux':
-//         cmd = 'xdg-open';
-//         break;
-
-//     case 'darwin':
-//         cmd = 'open';
-//         break;
-// }
-// child_process.exec(cmd + ' ' + openUrl + ':' + port);
