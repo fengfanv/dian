@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>贪吃蛇游戏</title>
+    <style>
+        /* 设置游戏容器的样式 */
+        #game-container {
+            width: 400px;
+            height: 400px;
+            border: 1px solid black;
+            position: relative;
+        }
+
+        /* 设置蛇身和食物的样式 */
+        .snake, .food {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+        }
+
+        .snake {
+            background-color: green;
+        }
+
+        .food {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <script>
+        // 等待页面加载完成后执行
+        document.addEventListener("DOMContentLoaded", function() {
+            // 获取游戏容器元素
+            var gameContainer = document.getElementById("game-container");
+
+            // 设置游戏容器的宽度和高度
+            var containerWidth = parseInt(getComputedStyle(gameContainer).width);
+            var containerHeight = parseInt(getComputedStyle(gameContainer).height);
+
+            // 设置蛇身的初始位置和移动速度
+            var snakeX = 0;
+            var snakeY = 0;
+            var snakeSpeed = 20;
+
+            // 设置蛇身的初始长度和方向
+            var snakeLength = 1;
+            var snakeDirection = "right";
+
+            // 在游戏容器中创建蛇身和食物元素
+            var snake = document.createElement("div");
+            snake.className = "snake";
+            gameContainer.appendChild(snake);
+
+            var food = document.createElement("div");
+            food.className = "food";
+            gameContainer.appendChild(food);
+
+            // 更新蛇身的位置和方向
+            function updateSnake() {
+                if (snakeDirection === "right") {
+                    snakeX += snakeSpeed;
+                } else if (snakeDirection === "left") {
+                    snakeX -= snakeSpeed;
+                } else if (snakeDirection === "up") {
+                    snakeY -= snakeSpeed;
+                } else if (snakeDirection === "down") {
+                    snakeY += snakeSpeed;
+                }
+
+                // 检查蛇是否吃到了食物
+                if (snakeX === parseInt(getComputedStyle(food).left) && snakeY === parseInt(getComputedStyle(food).top)) {
+                    // 随机设置新的食物位置
+                    food.style.left = Math.floor(Math.random() * (containerWidth / snakeSpeed)) * snakeSpeed + "px";
+                    food.style.top = Math.floor(Math.random() * (containerHeight / snakeSpeed)) * snakeSpeed + "px";
+                    
+                    // 增加蛇身长度
+                    snakeLength++;
+                    var newBodyPart = document.createElement("div");
+                    newBodyPart.className = "snake";
+                    gameContainer.appendChild(newBodyPart);
+                }
+
+                // 在游戏容器中更新蛇身的位置
+                var bodyParts = gameContainer.querySelectorAll(".snake");
+                for (var i = bodyParts.length - 1; i > 0; i--) {
+                    var prevX = parseInt(getComputedStyle(bodyParts[i - 1]).left);
+                    var prevY = parseInt(getComputedStyle(bodyParts[i - 1]).top);
+                    bodyParts[i].style.left = prevX + "px";
+                    bodyParts[i].style.top = prevY + "px";
+                }
+                snake.style.left = snakeX + "px";
+                snake.style.top = snakeY + "px";
+            }
+
+            // 处理按键事件，改变蛇的方向
+            document.addEventListener("keydown", function(event) {
+                if (event.key === "ArrowRight" && snakeDirection !== "left") {
+                    snakeDirection = "right";
+                } else if (event.key === "ArrowLeft" && snakeDirection !== "right") {
+                    snakeDirection = "left";
+                } else if (event.key === "ArrowUp" && snakeDirection !== "down") {
+                    snakeDirection = "up";
+                } else if (event.key === "ArrowDown" && snakeDirection !== "up") {
+                    snakeDirection = "down";
+                }
+            });
+
+            // 主循环，每隔一段时间更新蛇的位置
+            setInterval(function() {
+                updateSnake();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

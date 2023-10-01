@@ -13,7 +13,11 @@
 
 [开始游戏](https://fengfanv.github.io/dian/protectLamb/index.html)
 
-4、赛车游戏（完成状态：0%）
+4、贪吃蛇小游戏（完成状态：50%）
+
+[开始游戏](https://fengfanv.github.io/dian/snake/index.html)
+
+5、赛车游戏（完成状态：0%）
 
 ---
 
